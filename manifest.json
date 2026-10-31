@@ -1,0 +1,19 @@
+{
+  "id": "/studyos/",
+  "name": "StudyOS",
+  "short_name": "StudyOS",
+  "description": "Personal study and productivity tracker",
+  "lang": "en",
+  "start_url": "/studyos/",
+  "scope": "/studyos/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0c1210",
+  "theme_color": "#0e1513",
+  "categories": ["education", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
