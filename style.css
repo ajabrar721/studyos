@@ -87,3 +87,24 @@ nav button.on{color:var(--ac);font-weight:700}
 .cd.part{border:2px dashed var(--ac)}
 .cd.td{outline:2px solid var(--warn);outline-offset:1px}
 .cd.fu{opacity:.35}
+
+/* ---- Salah tracker ---- */
+.salah .sh{display:flex;justify-content:space-between;align-items:center}
+.salah .sh h3{margin:0}
+.pill.sc{color:var(--ac);font-size:.9rem;padding:4px 12px}
+.salah.full{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac),var(--sh)}
+.sl{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0}
+.sp{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 2px;border-radius:14px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font:inherit}
+.sp i{font-style:normal;width:32px;height:32px;border-radius:50%;border:2px solid var(--mut);display:grid;place-items:center;font-weight:800;color:var(--ac-t)}
+.sp span{font-size:.72rem;font-weight:600}
+.sp.on{border-color:var(--ac)}
+.sp.on i{background:var(--ac);border-color:var(--ac)}
+.smsg{margin:10px 0;font-size:.9rem;color:var(--mut)}
+.salah.full .smsg{color:var(--ac);font-weight:700}
+.sdays{display:flex;gap:6px;margin:4px 0 10px}
+.sd{flex:1;display:flex;flex-direction:column;align-items:center;padding:6px 0;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font:inherit}
+.sd small{font-size:.65rem}
+.sd b{font-size:.9rem}
+.sd.f{background:var(--ac);border-color:var(--ac);color:var(--ac-t)}
+.sd.f small{color:var(--ac-t)}
+.sd.sel{outline:2px solid var(--warn);outline-offset:1px}

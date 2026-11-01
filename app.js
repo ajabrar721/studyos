@@ -26,10 +26,12 @@ const L = {
   studyMsg: ['Time to study!', 'পড়ার সময় হয়েছে!'], revMsg: ["Write today's review", 'আজকের রিভিউ লিখুন'], taskMsg: ['Deadline is near', 'সময়সীমা ঘনিয়ে এসেছে'],
   streak: ['Study streak', 'স্টাডি স্ট্রিক'], curStreak: ['Current streak', 'বর্তমান স্ট্রিক'], longStreak: ['Longest streak', 'দীর্ঘতম স্ট্রিক'], totalXP: ['Total XP', 'মোট XP'], activeDays: ['Active study days', 'সক্রিয় পড়ার দিন'],
   days: ['days', 'দিন'], needMin: ['to count today as an active day', 'আজকের দিন সক্রিয় ধরতে'], week: ['Week', 'সপ্তাহ'], month: ['Month', 'মাস'], xpDay: ['Active day', 'সক্রিয় দিন'], xp7: ['7-day streak bonus!', '৭ দিনের স্ট্রিক বোনাস!'], xp30: ['30-day streak bonus!', '৩০ দিনের স্ট্রিক বোনাস!'],
+  salah: ['Salah Tracker', 'সালাত ট্র্যাকার'], fajr: ['Fajr', 'ফজর'], dhuhr: ['Dhuhr', 'যোহর'], asr: ['Asr', 'আসর'], maghrib: ['Maghrib', 'মাগরিব'], isha: ['Isha', 'ইশা'],
+  salahDone: ['All five prayers completed — +50 XP earned. Alhamdulillah!', 'পাঁচ ওয়াক্ত সালাত সম্পন্ন — +৫০ XP অর্জিত। আলহামদুলিল্লাহ!'], salahXP: ['Salah XP', 'সালাত XP'], salahFull: ['full days', 'পূর্ণ দিন'],
   export: ['Download backup', 'ব্যাকআপ ডাউনলোড'], import: ['Restore backup', 'ব্যাকআপ রিস্টোর'], hours: ['hours', 'ঘণ্টা'], saved: ['Saved', 'সংরক্ষিত']
 };
 const DEF = { lang: 'en', theme: '', target: 4, rs: false, rst: '18:00', rr: false, rrt: '21:00', rt: false, rtm: 30 };
-const S = { subjects: [], chapters: [], sessions: [], tasks: [], wastes: [], reviews: [], cfg: { ...DEF }, timer: null, view: 'home', range: 'week', sd: null, cal: 'month', calOff: 0 };
+const S = { subjects: [], chapters: [], sessions: [], tasks: [], wastes: [], reviews: [], cfg: { ...DEF }, timer: null, view: 'home', range: 'week', sd: null, cal: 'month', calOff: 0, salah: {}, sl: null };
 const t = k => (L[k] || [k, k])[S.cfg.lang === 'bn' ? 1 : 0];
 const nb = s => S.cfg.lang === 'bn' ? String(s).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]) : String(s);
 const fmt = m => { m = Math.round(m); return nb(m >= 60 ? `${Math.floor(m / 60)}${t('h')} ${m % 60}${t('m')}` : `${m}${t('m')}`); };
@@ -57,6 +59,7 @@ async function load() {
   for (const s of ['subjects', 'chapters', 'sessions', 'tasks', 'wastes', 'reviews']) S[s] = await all(s);
   S.cfg = { ...DEF, ...(await getKV('cfg', {})) };
   S.timer = await getKV('timer', null);
+  S.salah = await getKV('salah', {});
 }
 const render = async () => { await load(); await gamiCheck(); draw(); };
 
@@ -120,7 +123,11 @@ const wasteForm = x => modal(x.id ? t('edit') : t('addTime'), [
 /* ---------- Study streak + XP ----------
    Everything is DERIVED from the saved study sessions, so XP can never be counted twice.
    Only a small "already celebrated" list is stored (kv key xpSeen) so each reward pops up once. */
-const G = { MIN: 25, XP_MIN: 1, XP_DAY: 20, B7: 100, B30: 500 };
+const G = { MIN: 25, XP_MIN: 1, XP_DAY: 20, B7: 100, B30: 500, SALAH: 50 };
+/* Salah records live in kv key "salah": { "YYYY-MM-DD": ["fajr","dhuhr",...] }.
+   The +50 XP is only ever CALCULATED here from those records (one per date with all five prayers). */
+const SP = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+const salahSet = d => new Set(((S.salah || {})[d] || []).filter(p => SP.includes(p)));
 const dnum = d => { const [y, m, a] = d.split('-'); return Math.round(Date.UTC(y, m - 1, a) / 864e5); };
 const addDays = (d, n) => { const [y, m, a] = d.split('-'); return dk(new Date(y, m - 1, +a + n)); };
 function gami() {
@@ -135,10 +142,11 @@ function gami() {
     if (run === 30) rewards['b30:' + d] = G.B30;
     longest = Math.max(longest, run);
   });
-  const xp = Object.values(per).reduce((a, m) => a + m * G.XP_MIN, 0) + Object.values(rewards).reduce((a, b) => a + b, 0);
+  const salahDays = Object.keys(S.salah || {}).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d) && salahSet(d).size === SP.length).length, salahXP = salahDays * G.SALAH;
+  const xp = Object.values(per).reduce((a, m) => a + m * G.XP_MIN, 0) + Object.values(rewards).reduce((a, b) => a + b, 0) + salahXP;
   let cur = 0, d = A.has(today()) ? today() : addDays(today(), -1);
   while (A.has(d)) { cur++; d = addDays(d, -1); }
-  return { per, A, xp, cur, longest, total: act.length, rewards };
+  return { per, A, xp, cur, longest, total: act.length, rewards, salahXP, salahDays };
 }
 async function gamiCheck() {
   const g = gami(), keys = Object.keys(g.rewards);
@@ -176,6 +184,18 @@ function streakCard() {
   <div class="seg"><button class="${S.cal === 'week' ? 'on' : ''}" data-a="calMode" data-m="week">${t('week')}</button><button class="${S.cal === 'week' ? '' : 'on'}" data-a="calMode" data-m="month">${t('month')}</button></div>${calendar(g)}</div>`;
 }
 
+function salahCard() {
+  const td = today(), d = S.sl && S.sl <= td ? S.sl : td, st = salahSet(d), n = st.size, full = n === SP.length, g = gami();
+  const left = S.cfg.lang === 'bn' ? `+${nb(G.SALAH)} XP পেতে আরও ${nb(SP.length - n)}টি বাকি` : `${SP.length - n} left to earn +${G.SALAH} XP`;
+  return `<div class="card salah${full ? ' full' : ''}"><div class="sh"><h3>🕌 ${t('salah')}</h3><span class="pill sc">${nb(n)}/${nb(SP.length)}</span></div>
+  <small>${d === td ? t('today') : nb(d)}</small>
+  <div class="sl">${SP.map(p => `<button class="sp${st.has(p) ? ' on' : ''}" data-a="sTg" data-p="${p}" data-d="${d}" aria-pressed="${st.has(p)}"><i>${st.has(p) ? '✓' : ''}</i><span>${t(p)}</span></button>`).join('')}</div>
+  <div class="bar"><i style="width:${n / SP.length * 100}%"></i></div>
+  <p class="smsg">${full ? '✨ ' + t('salahDone') : left}</p>
+  <div class="sdays">${days(7).map(x => { const c = salahSet(x).size; return `<button class="sd${c === SP.length ? ' f' : ''}${x === d ? ' sel' : ''}" data-a="sDay" data-d="${x}"><small>${dl(x)}</small><b>${nb(c)}</b></button>`; }).join('')}</div>
+  <small>${t('salahXP')}: ${nb(g.salahXP)} XP · ${nb(g.salahDays)} ${t('salahFull')}</small></div>`;
+}
+
 /* ---------- views ---------- */
 const V = {};
 V.home = () => {
@@ -185,6 +205,7 @@ V.home = () => {
   <div class="bar"><i style="width:${Math.min(100, s / tg * 100)}%"></i></div>
   <div class="grid">${stat(t('studyToday'), fmt(s))}${stat(t('target'), nb(S.cfg.target) + t('h'))}${stat(t('done'), nb(dn))}${stat(t('pending'), nb(pend))}${stat(t('wasted'), fmt(w), 'bad')}</div>
   ${S.timer ? `<div class="card run"><b class="clk"></b><span>${esc(tname(S.timer))}</span><button class="btn" data-a="go" data-v="study">${t('study')}</button></div>` : ''}
+  ${salahCard()}
   ${streakCard()}`;
 };
 V.study = () => {
@@ -278,6 +299,17 @@ const A = {
   calMode: d => { S.cal = d.m; S.calOff = 0; draw(); },
   calNav: d => { S.calOff = Math.min(0, S.calOff + +d.n); draw(); },
   calDay: d => toast(nb(d.d) + ' · ' + fmt(gami().per[d.d] || 0)),
+  sTg: async d => {
+    if (!SP.includes(d.p) || !/^\d{4}-\d{2}-\d{2}$/.test(d.d) || d.d > today()) return;
+    const rec = await getKV('salah', {}), set = new Set((rec[d.d] || []).filter(p => SP.includes(p))), was = set.size === SP.length;
+    set.has(d.p) ? set.delete(d.p) : set.add(d.p);
+    const arr = SP.filter(p => set.has(p));
+    if (arr.length) rec[d.d] = arr; else delete rec[d.d];
+    await setKV('salah', rec);
+    await render();
+    if (arr.length === SP.length && !was) toast('🕌 +' + G.SALAH + ' XP — ' + t('salahDone'));
+  },
+  sDay: d => { S.sl = d.d; draw(); },
   notif: async () => { if (!('Notification' in window)) return toast(t('notifHelp')); toast((await Notification.requestPermission()) === 'granted' ? '✓' : '✗'); },
   exp: async () => { const o = {}; for (const s of STORES) o[s] = await all(s); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(o)], { type: 'application/json' })); a.download = 'studyos-backup-' + today() + '.json'; a.click(); }
 };
