@@ -29,10 +29,20 @@ const L = {
   salah: ['Salah Tracker', 'সালাত ট্র্যাকার'], fajr: ['Fajr', 'ফজর'], dhuhr: ['Dhuhr', 'যোহর'], asr: ['Asr', 'আসর'], maghrib: ['Maghrib', 'মাগরিব'], isha: ['Isha', 'ইশা'],
   salahDone: ['All five prayers completed — +50 XP earned. Alhamdulillah!', 'পাঁচ ওয়াক্ত সালাত সম্পন্ন — +৫০ XP অর্জিত। আলহামদুলিল্লাহ!'], salahXP: ['Salah XP', 'সালাত XP'], salahFull: ['full days', 'পূর্ণ দিন'],
   about: ['About StudyOS', 'StudyOS সম্পর্কে'], aboutBy: ['Developed by', 'ডেভেলপ করেছেন'], aboutName: ['Syed Md. Ajwad Abrar', 'সৈয়দ মোঃ আজওয়াদ আবরার'], aboutCollege: ['Dhaka Medical College (K79)', 'ঢাকা মেডিকেল কলেজ (কে৭৯)'],
+  pTitle: ['Pomodoro', 'পোমোডোরো'], pSW: ['Stopwatch', 'স্টপওয়াচ'], pFocus: ['Focus', 'ফোকাস'], pShort: ['Short break', 'ছোট বিরতি'], pLong: ['Long break', 'দীর্ঘ বিরতি'],
+  pPause: ['Pause', 'পজ'], pResume: ['Resume', 'চালিয়ে যান'], pSkip: ['Skip', 'এড়িয়ে যান'], pReset: ['Reset', 'রিসেট'],
+  pFocusMin: ['Focus (min)', 'ফোকাস (মিনিট)'], pShortMin: ['Short break (min)', 'ছোট বিরতি (মিনিট)'], pLongMin: ['Long break (min)', 'দীর্ঘ বিরতি (মিনিট)'],
+  pDoneToday: ['Pomodoros today', 'আজকের পোমোডোরো'], pTimeToday: ['Focus time today', 'আজকের ফোকাস সময়'], pDoneAll: ['Pomodoros total', 'মোট পোমোডোরো'], pTimeAll: ['Focus time total', 'মোট ফোকাস সময়'],
+  stopStudyFirst: ['Stop the study timer first', 'আগে স্টাডি টাইমার থামান'], pomoRunning: ['A Pomodoro focus is running — pause or finish it first', 'পোমোডোরো ফোকাস চলছে — আগে পজ করুন বা শেষ করুন'],
+  pFocusDone: ['Focus session complete! Time for a break.', 'ফোকাস সম্পন্ন! এবার বিরতি নিন।'], pBreakDone: ['Break over — ready to focus?', 'বিরতি শেষ — আবার ফোকাসে ফিরবেন?'],
+  pResetAsk: ['Discard this session? Time studied so far will not be saved.', 'এই সেশন বাতিল করবেন? এখন পর্যন্ত পড়া সময় সংরক্ষিত হবে না।'],
+  pNote: ['Only focus time counts as study time and XP. Breaks never do.', 'শুধু ফোকাস সময় পড়া ও XP হিসেবে গণ্য হয়। বিরতি কখনো নয়।'], swNote: ['The stopwatch is separate: it never adds study time or XP.', 'স্টপওয়াচ আলাদা: এটি পড়ার সময় বা XP যোগ করে না।'],
   export: ['Download backup', 'ব্যাকআপ ডাউনলোড'], import: ['Restore backup', 'ব্যাকআপ রিস্টোর'], hours: ['hours', 'ঘণ্টা'], saved: ['Saved', 'সংরক্ষিত']
 };
-const DEF = { lang: 'en', theme: '', target: 4, rs: false, rst: '18:00', rr: false, rrt: '21:00', rt: false, rtm: 30 };
-const S = { subjects: [], chapters: [], sessions: [], tasks: [], wastes: [], reviews: [], cfg: { ...DEF }, timer: null, view: 'home', range: 'week', sd: null, cal: 'month', calOff: 0, salah: {}, sl: null };
+const DEF = { lang: 'en', theme: '', target: 4, rs: false, rst: '18:00', rr: false, rrt: '21:00', rt: false, rtm: 30, pf: 25, ps: 5, pl: 15 };
+const PD = { mode: 'focus', status: 'idle', total: 0, remaining: 0, endAt: 0, seg: 0, cycle: 0, tp: '' };
+const SWD = { status: 'idle', start: 0, elapsed: 0 };
+const S = { subjects: [], chapters: [], sessions: [], tasks: [], wastes: [], reviews: [], cfg: { ...DEF }, timer: null, view: 'home', range: 'week', sd: null, cal: 'month', calOff: 0, salah: {}, sl: null, pomo: { ...PD }, sw: { ...SWD }, tt: 'pomo' };
 const t = k => (L[k] || [k, k])[S.cfg.lang === 'bn' ? 1 : 0];
 const nb = s => S.cfg.lang === 'bn' ? String(s).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]) : String(s);
 const fmt = m => { m = Math.round(m); return nb(m >= 60 ? `${Math.floor(m / 60)}${t('h')} ${m % 60}${t('m')}` : `${m}${t('m')}`); };
@@ -61,6 +71,8 @@ async function load() {
   S.cfg = { ...DEF, ...(await getKV('cfg', {})) };
   S.timer = await getKV('timer', null);
   S.salah = await getKV('salah', {});
+  S.pomo = { ...PD, ...(await getKV('pomo', {})) };
+  S.sw = { ...SWD, ...(await getKV('sw', {})) };
 }
 const render = async () => { await load(); await gamiCheck(); draw(); };
 
@@ -201,6 +213,119 @@ const CAP = '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke=
 const aboutCard = () => `<small class="abl">${t('about')}</small>
   <div class="card about"><div class="abi">${CAP}</div><div class="abt">StudyOS</div><div class="abln"></div><small class="abby">${t('aboutBy')}</small><div class="abn">${t('aboutName')}</div><div class="abc">${t('aboutCollege')}</div></div>`;
 
+/* ---------- Pomodoro + Stopwatch ----------
+   State lives in kv keys "pomo" and "sw" and uses absolute timestamps, so the countdown stays exact
+   when the app sleeps in the background. A finished focus session is saved ONCE as a normal study
+   session (pomoId stops duplicates), so it flows into the existing study time, streak and XP.
+   Breaks and the stopwatch never create study time. */
+const PC = 552.9, PN = { focus: 'pFocus', short: 'pShort', long: 'pLong' };
+const pdur = m => Math.max(1, +S.cfg[{ focus: 'pf', short: 'ps', long: 'pl' }[m]] || 1) * 60000;
+const pLeft = () => { const p = S.pomo; return p.status === 'running' ? Math.max(0, p.endAt - Date.now()) : p.status === 'paused' ? p.remaining : pdur(p.mode); };
+const pTotal = () => S.pomo.status === 'idle' ? pdur(S.pomo.mode) : S.pomo.total;
+const pElapsed = () => Math.min(S.pomo.total, Math.max(0, S.pomo.total - pLeft()));
+const pActive = () => S.pomo.status === 'running' && S.pomo.mode === 'focus';
+const savePomo = () => setKV('pomo', S.pomo);
+const saveSw = () => setKV('sw', S.sw);
+const zz = n => String(n).padStart(2, '0');
+const p2 = ms => { const s = Math.ceil(ms / 1000), h = Math.floor(s / 3600); return (h ? h + ':' : '') + zz(Math.floor(s / 60) % 60) + ':' + zz(s % 60); };
+const swEl = () => S.sw.status === 'running' ? Date.now() - S.sw.start : S.sw.elapsed;
+const swFmt = ms => { const s = Math.floor(ms / 1000); return `${zz(Math.floor(s / 3600))}:${zz(Math.floor(s / 60) % 60)}:${zz(s % 60)}.${Math.floor(ms / 100) % 10}`; };
+let pBusy = false;
+
+async function pLog(minutes, full, at) {
+  const id = 'p' + S.pomo.seg;
+  if ((await all('sessions')).some(x => x.pomoId === id)) return false;   // already saved: never twice
+  const r = parse(S.pomo.tp);
+  await put('sessions', { date: dk(at), minutes, sid: r.sid, cid: r.cid, note: '🍅 Pomodoro', ts: at, pomo: true, pomoId: id, full });
+  return true;
+}
+async function pFinish() {
+  const p = S.pomo, was = p.mode;
+  if (was === 'focus') {
+    await pLog(Math.round(p.total / 60000), true, p.endAt);
+    p.cycle = (p.cycle || 0) + 1;
+    if (p.cycle >= 4) { p.mode = 'long'; p.cycle = 0; } else p.mode = 'short';
+  } else p.mode = 'focus';
+  p.status = 'idle'; p.remaining = 0; p.endAt = 0;
+  await savePomo();
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  notify('🍅 StudyOS', t(was === 'focus' ? 'pFocusDone' : 'pBreakDone'));
+}
+async function pCheck() {
+  const p = S.pomo;
+  if (pBusy || !p || p.status !== 'running' || Date.now() < p.endAt) return false;
+  pBusy = true;
+  try { await pFinish(); return true; } finally { pBusy = false; }
+}
+function pUI() {
+  const T = $('#pmT');
+  if (T) { const l = pLeft(), tt = pTotal(), r = $('#pmR'); T.textContent = nb(p2(l)); if (r) r.style.strokeDashoffset = PC * (1 - Math.min(1, l / tt)); }
+  const w = $('#swT'); if (w) w.textContent = nb(swFmt(swEl()));
+}
+function pStats() {
+  const ps = S.sessions.filter(x => x.pomo), td = today(), f = a => ({ n: a.filter(x => x.full).length, m: a.reduce((s, x) => s + x.minutes, 0) });
+  return { d: f(ps.filter(x => x.date === td)), a: f(ps) };
+}
+const PA = {
+  pTab: d => { S.tt = d.t; draw(); },
+  pMode: async d => { if (S.pomo.status !== 'idle' || !PN[d.m]) return; S.pomo.mode = d.m; await savePomo(); draw(); },
+  pStart: async () => {
+    const p = S.pomo;
+    if (p.mode === 'focus' && S.timer) return toast(t('stopStudyFirst'));
+    p.total = pdur(p.mode); p.remaining = p.total; p.endAt = Date.now() + p.total; p.status = 'running';
+    if (p.mode === 'focus') p.seg = Date.now();
+    await savePomo(); draw();
+  },
+  pPause: async () => { const p = S.pomo; if (p.status !== 'running') return; p.remaining = Math.max(0, p.endAt - Date.now()); p.status = 'paused'; await savePomo(); draw(); },
+  pResume: async () => {
+    const p = S.pomo; if (p.status !== 'paused') return;
+    if (p.mode === 'focus' && S.timer) return toast(t('stopStudyFirst'));
+    p.endAt = Date.now() + p.remaining; p.status = 'running'; await savePomo(); draw();
+  },
+  pSkip: async () => {
+    const p = S.pomo;
+    if (p.mode === 'focus' && p.status !== 'idle') {            // keep the real minutes studied so far (not counted as a completed Pomodoro)
+      const m = Math.floor(pElapsed() / 60000);
+      if (m >= 1) await pLog(m, false, Date.now());
+      p.mode = 'short';
+    } else p.mode = p.mode === 'focus' ? 'short' : 'focus';
+    p.status = 'idle'; p.remaining = 0; p.endAt = 0;
+    await savePomo(); await render();
+  },
+  pReset: async () => {
+    const p = S.pomo;
+    if (p.status !== 'idle' && p.mode === 'focus' && pElapsed() >= 60000 && !confirm(t('pResetAsk'))) return;
+    p.status = 'idle'; p.remaining = 0; p.endAt = 0; await savePomo(); draw();
+  },
+  swStart: async () => { S.sw = { status: 'running', start: Date.now(), elapsed: 0 }; await saveSw(); draw(); },
+  swPause: async () => { if (S.sw.status !== 'running') return; S.sw = { status: 'paused', start: 0, elapsed: Date.now() - S.sw.start }; await saveSw(); draw(); },
+  swResume: async () => { if (S.sw.status !== 'paused') return; S.sw = { status: 'running', start: Date.now() - S.sw.elapsed, elapsed: 0 }; await saveSw(); draw(); },
+  swReset: async () => { S.sw = { ...SWD }; await saveSw(); draw(); }
+};
+function pomoBody() {
+  const p = S.pomo, m = p.mode, st = pStats(), run = p.status === 'running', idle = p.status === 'idle';
+  return `<div class="pm ${m}">
+  <div class="chips pmodes">${Object.keys(PN).map(k => `<button class="chip${m === k ? ' on' : ''}" data-a="pMode" data-m="${k}">${t(PN[k])}</button>`).join('')}</div>
+  <div class="pmr"><svg viewBox="0 0 200 200" aria-hidden="true"><circle class="rb" cx="100" cy="100" r="88"/><circle class="rf" id="pmR" cx="100" cy="100" r="88" style="stroke-dasharray:${PC};stroke-dashoffset:${PC * (1 - Math.min(1, pLeft() / pTotal()))}"/></svg>
+    <div class="pmc"><b id="pmT">${nb(p2(pLeft()))}</b><small>${t(PN[m])}</small></div></div>
+  <div class="dots">${[0, 1, 2, 3].map(i => `<i class="${i < (p.cycle || 0) ? 'on' : ''}"></i>`).join('')}</div>
+  <div class="row">${idle ? `<button class="btn" data-a="pStart">▶ ${t('start')}</button>` : run ? `<button class="btn" data-a="pPause">❚❚ ${t('pPause')}</button>` : `<button class="btn" data-a="pResume">▶ ${t('pResume')}</button>`}<button class="btn ghost" data-a="pSkip">⏭ ${t('pSkip')}</button><button class="btn ghost" data-a="pReset">↺ ${t('pReset')}</button></div>
+  <label>${t('topic')}<select id="ptp">${opts(topics(), p.tp)}</select></label>
+  <div class="durs"><label>${t('pFocusMin')}<input data-k="pf" type="number" inputmode="numeric" min="1" max="180" value="${S.cfg.pf}"></label><label>${t('pShortMin')}<input data-k="ps" type="number" inputmode="numeric" min="1" max="180" value="${S.cfg.ps}"></label><label>${t('pLongMin')}<input data-k="pl" type="number" inputmode="numeric" min="1" max="180" value="${S.cfg.pl}"></label></div>
+  <div class="mini"><div><small>${t('pDoneToday')}</small><b>${nb(st.d.n)}</b></div><div><small>${t('pTimeToday')}</small><b>${fmt(st.d.m)}</b></div><div><small>${t('pDoneAll')}</small><b>${nb(st.a.n)}</b></div><div><small>${t('pTimeAll')}</small><b>${fmt(st.a.m)}</b></div></div>
+  <small>${t('pNote')}</small></div>`;
+}
+function swBody() {
+  const w = S.sw.status;
+  return `<div class="swb"><div class="swt" id="swT">${nb(swFmt(swEl()))}</div>
+  <div class="row">${w === 'idle' ? `<button class="btn" data-a="swStart">▶ ${t('start')}</button>` : w === 'running' ? `<button class="btn" data-a="swPause">❚❚ ${t('pPause')}</button>` : `<button class="btn" data-a="swResume">▶ ${t('pResume')}</button>`}<button class="btn ghost" data-a="swReset">↺ ${t('pReset')}</button></div>
+  <small>${t('swNote')}</small></div>`;
+}
+function focusCard() {
+  const sw = S.tt === 'sw';
+  return `<div class="card"><div class="seg" style="margin-top:0"><button class="${sw ? '' : 'on'}" data-a="pTab" data-t="pomo">🍅 ${t('pTitle')}</button><button class="${sw ? 'on' : ''}" data-a="pTab" data-t="sw">⏱ ${t('pSW')}</button></div>${sw ? swBody() : pomoBody()}</div>`;
+}
+
 /* ---------- views ---------- */
 const V = {};
 V.home = () => {
@@ -218,6 +343,7 @@ V.study = () => {
   return `<div class="card"><h3>${t('timer')}</h3>${S.timer
     ? `<div class="big clk"></div><p>${esc(tname(S.timer))}</p><button class="btn danger" data-a="stop">■ ${t('stop')}</button>`
     : `<label>${t('topic')}<select id="tp">${opts(topics())}</select></label><button class="btn" data-a="start">▶ ${t('start')}</button>`}</div>
+  ${focusCard()}
   <div class="row"><button class="btn ghost" data-a="manual">＋ ${t('manual')}</button><button class="btn ghost" data-a="addS">＋ ${t('addSubject')}</button><button class="btn ghost" data-a="addC">＋ ${t('addChapter')}</button></div>
   ${S.subjects.map(s => `<div class="card"><div class="item flat" data-a="editS" data-id="${s.id}"><b class="grow">${esc(s.name)}</b><small>${fmt(S.sessions.filter(x => x.sid === s.id).reduce((a, x) => a + x.minutes, 0))}</small></div>
     <div class="chips">${S.chapters.filter(c => c.sid === s.id).map(c => `<button class="chip" data-a="editC" data-id="${c.id}">${esc(c.name)}</button>`).join('')}</div></div>`).join('')}
@@ -280,8 +406,9 @@ V.set = () => {
 
 /* ---------- actions ---------- */
 const A = {
+  ...PA,
   go: d => { S.view = d.v; draw(); },
-  start: async () => { S.timer = { start: Date.now(), ...parse($('#tp').value) }; await setKV('timer', S.timer); render(); },
+  start: async () => { if (pActive()) return toast(t('pomoRunning')); S.timer = { start: Date.now(), ...parse($('#tp').value) }; await setKV('timer', S.timer); render(); },
   stop: async () => {
     const tm = S.timer, mins = Math.max(1, Math.round((Date.now() - tm.start) / 60000));
     await setKV('timer', null);
@@ -343,7 +470,10 @@ async function remind() {
 
 /* ---------- draw + events ---------- */
 const NAV = [['home', '🏠'], ['study', '📚'], ['tasks', '✅'], ['waste', '⏳'], ['review', '📝'], ['stats', '📊']];
-function tick() { if (S.timer) document.querySelectorAll('.clk').forEach(e => e.textContent = nb(clock(Date.now() - S.timer.start))); }
+function tick() {
+  if (S.timer) document.querySelectorAll('.clk').forEach(e => e.textContent = nb(clock(Date.now() - S.timer.start)));
+  pUI(); pCheck().then(r => { if (r) render(); });
+}
 function draw() {
   const c = S.cfg, th = c.theme || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
   document.documentElement.dataset.theme = th; document.documentElement.lang = c.lang;
@@ -358,14 +488,21 @@ $('#themeBtn').onclick = async () => { S.cfg.theme = document.documentElement.da
 $('#app').onclick = e => { const b = e.target.closest('[data-a]'); if (b && A[b.dataset.a]) A[b.dataset.a](b.dataset); };
 $('#app').onchange = e => {
   const el = e.target, k = el.dataset.k;
-  if (k) { S.cfg[k] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? +el.value : el.value; saveCfg(); }
+  if (k) {
+    S.cfg[k] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? +el.value : el.value;
+    const pk = k === 'pf' || k === 'ps' || k === 'pl';
+    if (pk) S.cfg[k] = Math.min(180, Math.max(1, Math.round(S.cfg[k]) || DEF[k]));
+    saveCfg(); if (pk) draw();
+  }
+  if (el.id === 'ptp') { S.pomo.tp = el.value; savePomo(); }
   if (el.id === 'sd') { S.sd = el.value; draw(); }
   if (el.id === 'imp') importData(el.files[0]);
 };
 
 (async () => {
-  await openDB(); await load(); await gamiCheck(); draw(); remind();
+  await openDB(); await load(); if (await pCheck()) await load(); await gamiCheck(); draw(); remind();
   setInterval(remind, 30000); setInterval(tick, 1000);
+  setInterval(() => { if (S.sw.status === 'running') { const w = $('#swT'); if (w) w.textContent = nb(swFmt(swEl())); } }, 100);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { tick(); remind(); } });
   if ('serviceWorker' in navigator && !window.Capacitor) navigator.serviceWorker.register('sw.js').catch(() => { });
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist();

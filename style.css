@@ -119,3 +119,26 @@ nav button.on{color:var(--ac);font-weight:700}
 .abn{margin:6px 0 4px;font-size:1.55rem;font-weight:800;line-height:1.25;letter-spacing:-.01em}
 .abc{color:var(--mut);font-size:.95rem}
 @media(min-width:700px){.about{padding:34px 28px 32px}.abn{font-size:1.8rem}}
+
+/* ---- Pomodoro + stopwatch ---- */
+.pm{--pc:var(--ac);--pt:var(--ac-t)}
+.pm.short{--pc:var(--warn);--pt:#2a1a00}
+.pm.long{--pc:#6f9bff;--pt:#08142e}
+.pmodes{justify-content:center;margin-bottom:4px}
+.pmodes .chip.on{background:var(--pc);border-color:var(--pc);color:var(--pt);font-weight:700}
+.pmr{position:relative;width:min(290px,74vw);aspect-ratio:1;margin:10px auto 4px}
+.pmr svg{width:100%;height:100%;transform:rotate(-90deg)}
+.pmr circle{fill:none;stroke-width:9;stroke-linecap:round}
+.pmr .rb{stroke:var(--bd)}
+.pmr .rf{stroke:var(--pc);transition:stroke-dashoffset .5s linear}
+.pmc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.pmc b{font-size:clamp(2.4rem,11vw,3.7rem);font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.pmc small{text-transform:uppercase;letter-spacing:.16em;font-weight:700;color:var(--pc)}
+.dots{display:flex;justify-content:center;gap:8px;margin:6px 0 2px}
+.dots i{width:10px;height:10px;border-radius:50%;background:var(--bd)}
+.dots i.on{background:var(--pc)}
+.durs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.durs label{margin:6px 0;font-size:.78rem}
+.swb{text-align:center}
+.swt{margin:18px 0 8px;font-size:clamp(2.2rem,10.5vw,3.6rem);font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+@media(prefers-reduced-motion:reduce){.pmr .rf{transition:none}}
