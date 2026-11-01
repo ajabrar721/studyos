@@ -72,3 +72,18 @@ nav button.on{color:var(--ac);font-weight:700}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 @media(min-width:700px){main{padding-left:24px;padding-right:24px}.hero{padding:22px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ---- Study streak + XP ---- */
+.mini{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+@media(min-width:560px){.mini{grid-template-columns:repeat(4,1fr)}}
+.mini div{background:var(--bg);border-radius:12px;padding:10px 12px}
+.mini b{display:block;font-size:1.25rem;letter-spacing:-.01em}
+.calhd{display:flex;align-items:center;justify-content:space-between;margin:6px 0}
+.calhd .chip:disabled{opacity:.3}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}
+.cal>b{font-size:.7rem;color:var(--mut);font-weight:600}
+.cd{aspect-ratio:1;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font:inherit;font-size:.85rem;padding:0}
+.cd.on{background:var(--ac);color:var(--ac-t);border-color:var(--ac);font-weight:700}
+.cd.part{border:2px dashed var(--ac)}
+.cd.td{outline:2px solid var(--warn);outline-offset:1px}
+.cd.fu{opacity:.35}

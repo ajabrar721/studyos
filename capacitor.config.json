@@ -1,0 +1,15 @@
+{
+  "appId": "com.ajabrar.studyos",
+  "appName": "StudyOS",
+  "webDir": "www",
+  "server": { "androidScheme": "https" },
+  "android": { "backgroundColor": "#0c1210" },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "backgroundColor": "#0c1210",
+      "showSpinner": false
+    }
+  }
+}

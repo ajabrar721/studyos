@@ -24,10 +24,12 @@ const L = {
   taskRem: ['Task deadline reminder', 'কাজের রিমাইন্ডার'], minBefore: ['Minutes before deadline', 'সময়সীমার কত মিনিট আগে'], enableNotif: ['Enable notifications', 'নোটিফিকেশন চালু করুন'],
   notifHelp: ['On iPad: Share → Add to Home Screen, open StudyOS from the icon, then enable. Reminders fire while the app is open or recently active.', 'iPad-এ: Share → Add to Home Screen করে আইকন থেকে খুলুন, তারপর চালু করুন। অ্যাপ খোলা বা সদ্য সক্রিয় থাকলে রিমাইন্ডার আসবে।'],
   studyMsg: ['Time to study!', 'পড়ার সময় হয়েছে!'], revMsg: ["Write today's review", 'আজকের রিভিউ লিখুন'], taskMsg: ['Deadline is near', 'সময়সীমা ঘনিয়ে এসেছে'],
+  streak: ['Study streak', 'স্টাডি স্ট্রিক'], curStreak: ['Current streak', 'বর্তমান স্ট্রিক'], longStreak: ['Longest streak', 'দীর্ঘতম স্ট্রিক'], totalXP: ['Total XP', 'মোট XP'], activeDays: ['Active study days', 'সক্রিয় পড়ার দিন'],
+  days: ['days', 'দিন'], needMin: ['to count today as an active day', 'আজকের দিন সক্রিয় ধরতে'], week: ['Week', 'সপ্তাহ'], month: ['Month', 'মাস'], xpDay: ['Active day', 'সক্রিয় দিন'], xp7: ['7-day streak bonus!', '৭ দিনের স্ট্রিক বোনাস!'], xp30: ['30-day streak bonus!', '৩০ দিনের স্ট্রিক বোনাস!'],
   export: ['Download backup', 'ব্যাকআপ ডাউনলোড'], import: ['Restore backup', 'ব্যাকআপ রিস্টোর'], hours: ['hours', 'ঘণ্টা'], saved: ['Saved', 'সংরক্ষিত']
 };
 const DEF = { lang: 'en', theme: '', target: 4, rs: false, rst: '18:00', rr: false, rrt: '21:00', rt: false, rtm: 30 };
-const S = { subjects: [], chapters: [], sessions: [], tasks: [], wastes: [], reviews: [], cfg: { ...DEF }, timer: null, view: 'home', range: 'week', sd: null };
+const S = { subjects: [], chapters: [], sessions: [], tasks: [], wastes: [], reviews: [], cfg: { ...DEF }, timer: null, view: 'home', range: 'week', sd: null, cal: 'month', calOff: 0 };
 const t = k => (L[k] || [k, k])[S.cfg.lang === 'bn' ? 1 : 0];
 const nb = s => S.cfg.lang === 'bn' ? String(s).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]) : String(s);
 const fmt = m => { m = Math.round(m); return nb(m >= 60 ? `${Math.floor(m / 60)}${t('h')} ${m % 60}${t('m')}` : `${m}${t('m')}`); };
@@ -56,7 +58,7 @@ async function load() {
   S.cfg = { ...DEF, ...(await getKV('cfg', {})) };
   S.timer = await getKV('timer', null);
 }
-const render = async () => { await load(); draw(); };
+const render = async () => { await load(); await gamiCheck(); draw(); };
 
 /* ---------- helpers ---------- */
 const dk = d => { d = new Date(d); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
@@ -115,6 +117,65 @@ const wasteForm = x => modal(x.id ? t('edit') : t('addTime'), [
   o => put('wastes', { ...x, type: o.type, minutes: +o.minutes, date: o.date, ts: x.ts || Date.now() }),
   x.id && (() => del('wastes', x.id)));
 
+/* ---------- Study streak + XP ----------
+   Everything is DERIVED from the saved study sessions, so XP can never be counted twice.
+   Only a small "already celebrated" list is stored (kv key xpSeen) so each reward pops up once. */
+const G = { MIN: 25, XP_MIN: 1, XP_DAY: 20, B7: 100, B30: 500 };
+const dnum = d => { const [y, m, a] = d.split('-'); return Math.round(Date.UTC(y, m - 1, a) / 864e5); };
+const addDays = (d, n) => { const [y, m, a] = d.split('-'); return dk(new Date(y, m - 1, +a + n)); };
+function gami() {
+  const per = {};
+  S.sessions.forEach(x => per[x.date] = (per[x.date] || 0) + x.minutes);
+  const act = Object.keys(per).filter(d => per[d] >= G.MIN).sort(), A = new Set(act), rewards = {};
+  let run = 0, prev = null, longest = 0;
+  act.forEach(d => {
+    run = prev && dnum(d) - dnum(prev) === 1 ? run + 1 : 1; prev = d;
+    rewards['day:' + d] = G.XP_DAY;
+    if (run === 7) rewards['b7:' + d] = G.B7;
+    if (run === 30) rewards['b30:' + d] = G.B30;
+    longest = Math.max(longest, run);
+  });
+  const xp = Object.values(per).reduce((a, m) => a + m * G.XP_MIN, 0) + Object.values(rewards).reduce((a, b) => a + b, 0);
+  let cur = 0, d = A.has(today()) ? today() : addDays(today(), -1);
+  while (A.has(d)) { cur++; d = addDays(d, -1); }
+  return { per, A, xp, cur, longest, total: act.length, rewards };
+}
+async function gamiCheck() {
+  const g = gami(), keys = Object.keys(g.rewards);
+  let seen = await getKV('xpSeen', null);
+  if (seen === null) { await setKV('xpSeen', Object.fromEntries(keys.map(k => [k, 1]))); return; } // first run: existing history is not re-announced
+  const fresh = keys.filter(k => !seen[k]);
+  if (!fresh.length) return;
+  fresh.forEach(k => seen[k] = 1);
+  await setKV('xpSeen', seen);
+  const msg = fresh.sort().map(k => k.startsWith('b30') ? `🏆 +${G.B30} XP ${t('xp30')}` : k.startsWith('b7') ? `🔥 +${G.B7} XP ${t('xp7')}` : `⭐ +${G.XP_DAY} XP ${t('xpDay')}`);
+  setTimeout(() => toast(msg.join('  ·  ')), 400);
+}
+function calendar(g) {
+  const wk = S.cal === 'week', now = new Date(), td = today();
+  let cells = [], title;
+  if (wk) {
+    const dow = (now.getDay() + 6) % 7;
+    for (let i = 0; i < 7; i++) cells.push(dk(new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow + i)));
+    title = nb(cells[0].slice(5)) + ' – ' + nb(cells[6].slice(5));
+  } else {
+    const f = new Date(now.getFullYear(), now.getMonth() + S.calOff, 1), n = new Date(f.getFullYear(), f.getMonth() + 1, 0).getDate();
+    title = f.toLocaleDateString(S.cfg.lang === 'bn' ? 'bn-BD' : 'en-US', { month: 'long', year: 'numeric' });
+    cells = Array((f.getDay() + 6) % 7).fill('');
+    for (let i = 1; i <= n; i++) cells.push(dk(new Date(f.getFullYear(), f.getMonth(), i)));
+  }
+  const heads = Array.from({ length: 7 }, (_, i) => `<b>${new Date(2024, 0, 1 + i).toLocaleDateString(S.cfg.lang === 'bn' ? 'bn-BD' : 'en-US', { weekday: 'short' })}</b>`).join('');
+  return `<div class="calhd">${wk ? '' : `<button class="chip" data-a="calNav" data-n="-1">‹</button>`}<b>${esc(title)}</b>${wk ? '' : `<button class="chip" data-a="calNav" data-n="1" ${S.calOff >= 0 ? 'disabled' : ''}>›</button>`}</div>
+  <div class="cal">${heads}${cells.map(d => d ? `<button class="cd${g.A.has(d) ? ' on' : (g.per[d] ? ' part' : '')}${d === td ? ' td' : ''}${d > td ? ' fu' : ''}" data-a="calDay" data-d="${d}">${nb(+d.slice(8))}</button>` : '<i></i>').join('')}</div>`;
+}
+function streakCard() {
+  const g = gami(), m = g.per[today()] || 0;
+  return `<div class="card"><h3>🔥 ${t('streak')}</h3>
+  <div class="mini"><div><small>${t('curStreak')}</small><b>${nb(g.cur)} ${t('days')}</b></div><div><small>${t('longStreak')}</small><b>${nb(g.longest)} ${t('days')}</b></div><div><small>${t('totalXP')}</small><b>${nb(g.xp)}</b></div><div><small>${t('activeDays')}</small><b>${nb(g.total)}</b></div></div>
+  <div class="bar"><i style="width:${Math.min(100, m / G.MIN * 100)}%"></i></div><small>${m >= G.MIN ? '✓ ' : ''}${nb(Math.min(m, G.MIN))}/${nb(G.MIN)} ${t('m')} ${t('needMin')}</small>
+  <div class="seg"><button class="${S.cal === 'week' ? 'on' : ''}" data-a="calMode" data-m="week">${t('week')}</button><button class="${S.cal === 'week' ? '' : 'on'}" data-a="calMode" data-m="month">${t('month')}</button></div>${calendar(g)}</div>`;
+}
+
 /* ---------- views ---------- */
 const V = {};
 V.home = () => {
@@ -123,7 +184,8 @@ V.home = () => {
   return `<div class="card hero"><div class="ring" style="--p:${sc}"><b>${nb(sc)}</b></div><div class="grow"><small>${t('score')}</small><h2>${fmt(s)}</h2><small>${t('target')}: ${nb(S.cfg.target)}${t('h')}</small></div></div>
   <div class="bar"><i style="width:${Math.min(100, s / tg * 100)}%"></i></div>
   <div class="grid">${stat(t('studyToday'), fmt(s))}${stat(t('target'), nb(S.cfg.target) + t('h'))}${stat(t('done'), nb(dn))}${stat(t('pending'), nb(pend))}${stat(t('wasted'), fmt(w), 'bad')}</div>
-  ${S.timer ? `<div class="card run"><b class="clk"></b><span>${esc(tname(S.timer))}</span><button class="btn" data-a="go" data-v="study">${t('study')}</button></div>` : ''}`;
+  ${S.timer ? `<div class="card run"><b class="clk"></b><span>${esc(tname(S.timer))}</span><button class="btn" data-a="go" data-v="study">${t('study')}</button></div>` : ''}
+  ${streakCard()}`;
 };
 V.study = () => {
   const recent = [...S.sessions].sort((a, b) => b.ts - a.ts).slice(0, 15);
@@ -213,6 +275,9 @@ const A = {
   editW: d => wasteForm(S.wastes.find(x => x.id == d.id)),
   saveR: async () => { const v = {}; document.querySelectorAll('#rv textarea').forEach(e => v[e.name] = e.value); const r = S.reviews.find(x => x.date === today()) || {}; await put('reviews', { ...r, ...v, date: today() }); toast('✓ ' + t('saved')); render(); },
   rng: d => { S.range = d.r; draw(); },
+  calMode: d => { S.cal = d.m; S.calOff = 0; draw(); },
+  calNav: d => { S.calOff = Math.min(0, S.calOff + +d.n); draw(); },
+  calDay: d => toast(nb(d.d) + ' · ' + fmt(gami().per[d.d] || 0)),
   notif: async () => { if (!('Notification' in window)) return toast(t('notifHelp')); toast((await Notification.requestPermission()) === 'granted' ? '✓' : '✗'); },
   exp: async () => { const o = {}; for (const s of STORES) o[s] = await all(s); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(o)], { type: 'application/json' })); a.download = 'studyos-backup-' + today() + '.json'; a.click(); }
 };
@@ -261,9 +326,9 @@ $('#app').onchange = e => {
 };
 
 (async () => {
-  await openDB(); await load(); draw(); remind();
+  await openDB(); await load(); await gamiCheck(); draw(); remind();
   setInterval(remind, 30000); setInterval(tick, 1000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { tick(); remind(); } });
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
+  if ('serviceWorker' in navigator && !window.Capacitor) navigator.serviceWorker.register('sw.js').catch(() => { });
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
 })();
