@@ -28,6 +28,7 @@ const L = {
   days: ['days', 'দিন'], needMin: ['to count today as an active day', 'আজকের দিন সক্রিয় ধরতে'], week: ['Week', 'সপ্তাহ'], month: ['Month', 'মাস'], xpDay: ['Active day', 'সক্রিয় দিন'], xp7: ['7-day streak bonus!', '৭ দিনের স্ট্রিক বোনাস!'], xp30: ['30-day streak bonus!', '৩০ দিনের স্ট্রিক বোনাস!'],
   salah: ['Salah Tracker', 'সালাত ট্র্যাকার'], fajr: ['Fajr', 'ফজর'], dhuhr: ['Dhuhr', 'যোহর'], asr: ['Asr', 'আসর'], maghrib: ['Maghrib', 'মাগরিব'], isha: ['Isha', 'ইশা'],
   salahDone: ['All five prayers completed — +50 XP earned. Alhamdulillah!', 'পাঁচ ওয়াক্ত সালাত সম্পন্ন — +৫০ XP অর্জিত। আলহামদুলিল্লাহ!'], salahXP: ['Salah XP', 'সালাত XP'], salahFull: ['full days', 'পূর্ণ দিন'],
+  about: ['About StudyOS', 'StudyOS সম্পর্কে'], aboutBy: ['Developed by', 'ডেভেলপ করেছেন'], aboutName: ['Syed Md. Ajwad Abrar', 'সৈয়দ মোঃ আজওয়াদ আবরার'], aboutCollege: ['Dhaka Medical College (K79)', 'ঢাকা মেডিকেল কলেজ (কে৭৯)'],
   export: ['Download backup', 'ব্যাকআপ ডাউনলোড'], import: ['Restore backup', 'ব্যাকআপ রিস্টোর'], hours: ['hours', 'ঘণ্টা'], saved: ['Saved', 'সংরক্ষিত']
 };
 const DEF = { lang: 'en', theme: '', target: 4, rs: false, rst: '18:00', rr: false, rrt: '21:00', rt: false, rtm: 30 };
@@ -196,6 +197,10 @@ function salahCard() {
   <small>${t('salahXP')}: ${nb(g.salahXP)} XP · ${nb(g.salahDays)} ${t('salahFull')}</small></div>`;
 }
 
+const CAP = '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5-10-5z"/><path d="M6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5"/><path d="M22 9v6"/></svg>';
+const aboutCard = () => `<small class="abl">${t('about')}</small>
+  <div class="card about"><div class="abi">${CAP}</div><div class="abt">StudyOS</div><div class="abln"></div><small class="abby">${t('aboutBy')}</small><div class="abn">${t('aboutName')}</div><div class="abc">${t('aboutCollege')}</div></div>`;
+
 /* ---------- views ---------- */
 const V = {};
 V.home = () => {
@@ -269,7 +274,8 @@ V.set = () => {
   return `<h2>${t('settings')}</h2><div class="card">${i(t('target') + ' (' + t('hours') + ')', 'target', 'number', 'min="0.5" step="0.5"')}</div>
   <div class="card"><h3>${t('reminders')}</h3>${cb(t('studyRem'), 'rs')}${i('', 'rst', 'time')}${cb(t('revRem'), 'rr')}${i('', 'rrt', 'time')}${cb(t('taskRem'), 'rt')}${i(t('minBefore'), 'rtm', 'number', 'min="1"')}
   <button class="btn" data-a="notif">🔔 ${t('enableNotif')}</button><p><small>${t('notifHelp')}</small></p></div>
-  <div class="card"><div class="row"><button class="btn ghost" data-a="exp">⬇ ${t('export')}</button><label class="btn ghost" style="margin:0">⬆ ${t('import')}<input type="file" id="imp" accept=".json" hidden></label></div></div>`;
+  <div class="card"><div class="row"><button class="btn ghost" data-a="exp">⬇ ${t('export')}</button><label class="btn ghost" style="margin:0">⬆ ${t('import')}<input type="file" id="imp" accept=".json" hidden></label></div></div>
+  ${aboutCard()}`;
 };
 
 /* ---------- actions ---------- */

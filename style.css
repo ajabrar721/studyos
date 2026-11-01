@@ -108,3 +108,14 @@ nav button.on{color:var(--ac);font-weight:700}
 .sd.f{background:var(--ac);border-color:var(--ac);color:var(--ac-t)}
 .sd.f small{color:var(--ac-t)}
 .sd.sel{outline:2px solid var(--warn);outline-offset:1px}
+
+/* ---- About / developer credit ---- */
+.abl{display:block;margin:22px 4px 6px;text-transform:uppercase;letter-spacing:.12em;font-weight:700}
+.about{max-width:440px;margin:0 auto;padding:28px 22px 26px;text-align:center;background:var(--card);background:radial-gradient(120% 90% at 50% 0%,color-mix(in srgb,var(--ac) 11%,var(--card)),var(--card))}
+.abi{width:58px;height:58px;margin:0 auto 12px;border-radius:50%;display:grid;place-items:center;color:var(--ac);background:var(--bg);border:1px solid var(--bd)}
+.abt{font-size:.95rem;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--ac)}
+.abln{width:36px;height:2px;margin:14px auto;border-radius:2px;background:var(--ac);opacity:.5}
+.abby{display:block;letter-spacing:.06em}
+.abn{margin:6px 0 4px;font-size:1.55rem;font-weight:800;line-height:1.25;letter-spacing:-.01em}
+.abc{color:var(--mut);font-size:.95rem}
+@media(min-width:700px){.about{padding:34px 28px 32px}.abn{font-size:1.8rem}}
